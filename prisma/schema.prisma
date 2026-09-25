@@ -1,0 +1,169 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TipoInstitucion {
+  nacional
+  regional
+  municipal
+  privado
+}
+
+enum TipoResultado {
+  documento_digital
+  documento_fisico
+  licencia
+  objeto_fisico
+  confirmacion
+}
+
+enum Modalidad {
+  online
+  presencial
+}
+
+enum CostoTipo {
+  fijo
+  variable
+  gratuito
+  rango
+}
+
+model Categoria {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  nombre      String
+  descripcion String?
+  icono       String?
+  tramites    Tramite[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Institucion {
+  id          String          @id @default(cuid())
+  slug        String          @unique
+  nombre      String
+  sigla       String?
+  tipo        TipoInstitucion
+  webOficial  String
+  descripcion String?
+  tramites    Tramite[]
+  pasos       Paso[]
+  coberturas  CoberturaZona[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Tramite {
+  id                    String        @id @default(cuid())
+  slug                  String        @unique
+  nombre                String
+  descripcion           String
+  categoriaId           String
+  categoria             Categoria     @relation(fields: [categoriaId], references: [id])
+  institucionId         String
+  institucion           Institucion   @relation(fields: [institucionId], references: [id])
+  esCompuesto           Boolean       @default(false)
+  esRecurrente          Boolean       @default(false)
+  duracionMinDias       Int           @default(0)
+  duracionMaxDias       Int           @default(0)
+  duracionTexto         String
+  tipoResultado         TipoResultado
+  vigenciaResultadoDias Int?
+  ultimaVerificacion    DateTime
+  fuenteUrl             String
+  frecuenciaBusqueda    Int           @default(0)
+  baseLegal             String?
+  costoResumen          String
+
+  pasos        Paso[]
+  requisitos   Requisito[]
+  canalesPago  TramiteCanal[]
+  guiasTramite GuiaTramite[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Paso {
+  id            String      @id @default(cuid())
+  tramiteId     String
+  tramite       Tramite     @relation(fields: [tramiteId], references: [id], onDelete: Cascade)
+  orden         Int
+  modalidad     Modalidad?
+  variante      String?
+  esOpcional    Boolean     @default(false)
+  titulo        String
+  descripcion   String
+  institucionId String?
+  institucion   Institucion? @relation(fields: [institucionId], references: [id])
+  costoTipo     CostoTipo   @default(gratuito)
+  costoMin      Decimal     @default(0) @db.Decimal(10, 2)
+  costoMax      Decimal     @default(0) @db.Decimal(10, 2)
+  ubicacion     String?
+}
+
+model Requisito {
+  id          String   @id @default(cuid())
+  tramiteId   String
+  tramite     Tramite  @relation(fields: [tramiteId], references: [id], onDelete: Cascade)
+  descripcion String
+  aplicaSi    String?
+  orden       Int      @default(0)
+}
+
+model CanalPago {
+  id             String         @id @default(cuid())
+  nombre         String
+  tipo           String
+  tramitesCanal  TramiteCanal[]
+}
+
+model TramiteCanal {
+  tramiteId String
+  canalId   String
+  tramite   Tramite   @relation(fields: [tramiteId], references: [id], onDelete: Cascade)
+  canal     CanalPago @relation(fields: [canalId], references: [id], onDelete: Cascade)
+
+  @@id([tramiteId, canalId])
+}
+
+model CoberturaZona {
+  id            String      @id @default(cuid())
+  institucionId String
+  institucion   Institucion @relation(fields: [institucionId], references: [id], onDelete: Cascade)
+  region        String
+  distrito      String?
+}
+
+model GuiaMultientidad {
+  id                 String        @id @default(cuid())
+  slug               String        @unique
+  nombre             String
+  descripcion        String
+  ultimaVerificacion DateTime
+  duracionEstimada   String
+  costoEstimado      String
+  guiasTramite       GuiaTramite[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model GuiaTramite {
+  id        String           @id @default(cuid())
+  guiaId    String
+  tramiteId String
+  orden     Int
+  nota      String?
+  guia      GuiaMultientidad @relation(fields: [guiaId], references: [id], onDelete: Cascade)
+  tramite   Tramite          @relation(fields: [tramiteId], references: [id], onDelete: Cascade)
+}
