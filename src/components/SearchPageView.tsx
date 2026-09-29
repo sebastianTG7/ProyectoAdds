@@ -20,6 +20,7 @@ import {
   Stack,
   Card,
   CardContent,
+  Pagination,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
@@ -49,12 +50,16 @@ export default function SearchPageView({ initialCategorias, initialInstituciones
   const [selectedModality, setSelectedModality] = useState<string>('all');
   const [onlyFree, setOnlyFree] = useState<boolean>(false);
   const [results, setResults] = useState<Tramite[]>([]);
+  const [sortBy, setSortBy] = useState<'frecuencia' | 'az' | 'costo'>('frecuencia');
+  const [page, setPage] = useState(1);
+  const ITEMS_PER_PAGE = 24;
 
   // Update search state when query params change
   useEffect(() => {
     setQuery(queryParam);
     if (catParam) setSelectedCat(catParam);
     if (instParam) setSelectedInst(instParam);
+    setPage(1);
   }, [queryParam, catParam, instParam]);
 
   // Execute search filter
@@ -65,8 +70,19 @@ export default function SearchPageView({ initialCategorias, initialInstituciones
       modalidad: selectedModality === 'all' ? undefined : selectedModality,
       soloGratuitos: onlyFree,
     });
-    setResults(res);
-  }, [query, selectedCat, selectedInst, selectedModality, onlyFree]);
+
+    const sorted = [...res];
+    if (sortBy === 'az') {
+      sorted.sort((a, b) => a.nombre.localeCompare(b.nombre));
+    } else if (sortBy === 'costo') {
+      sorted.sort((a, b) => (a.costoPrincipal ?? 0) - (b.costoPrincipal ?? 0));
+    } else {
+      sorted.sort((a, b) => b.frecuenciaBusqueda - a.frecuenciaBusqueda);
+    }
+
+    setResults(sorted);
+    setPage(1);
+  }, [query, selectedCat, selectedInst, selectedModality, onlyFree, sortBy]);
 
   const handleResetFilters = () => {
     setQuery('');
@@ -74,8 +90,13 @@ export default function SearchPageView({ initialCategorias, initialInstituciones
     setSelectedInst('');
     setSelectedModality('all');
     setOnlyFree(false);
+    setSortBy('frecuencia');
+    setPage(1);
     router.push('/buscar');
   };
+
+  const totalPages = Math.ceil(results.length / ITEMS_PER_PAGE);
+  const paginatedResults = results.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
   return (
     <Box sx={{ bgcolor: '#F8FAFC', minHeight: '80vh', py: 5 }}>
@@ -224,11 +245,32 @@ export default function SearchPageView({ initialCategorias, initialInstituciones
           </CardContent>
         </Card>
 
-        {/* Results Header */}
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#0F172A' }}>
-            {results.length} {results.length === 1 ? 'trámite encontrado' : 'trámites encontrados'}
-          </Typography>
+        {/* Results Header with Sorting */}
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3, flexWrap: 'wrap', gap: 2 }}>
+          <Box>
+            <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#0F172A' }}>
+              {results.length} {results.length === 1 ? 'trámite encontrado' : 'trámites encontrados'}
+            </Typography>
+            {totalPages > 1 && (
+              <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 500 }}>
+                Mostrando página {page} de {totalPages} ({ITEMS_PER_PAGE} por página)
+              </Typography>
+            )}
+          </Box>
+
+          <FormControl size="small" sx={{ minWidth: 200 }}>
+            <InputLabel id="search-sort-label">Ordenar por</InputLabel>
+            <Select
+              labelId="search-sort-label"
+              value={sortBy}
+              label="Ordenar por"
+              onChange={(e) => setSortBy(e.target.value as any)}
+            >
+              <MenuItem value="frecuencia">Más demandados</MenuItem>
+              <MenuItem value="az">Alfabético (A - Z)</MenuItem>
+              <MenuItem value="costo">Menor costo</MenuItem>
+            </Select>
+          </FormControl>
         </Box>
 
         {/* Results Grid */}
@@ -246,13 +288,31 @@ export default function SearchPageView({ initialCategorias, initialInstituciones
             </Button>
           </Box>
         ) : (
-          <Grid2 container spacing={3}>
-            {results.map((tramite) => (
-              <Grid2 key={tramite.id} size={{ xs: 12, sm: 6, md: 4 }}>
-                <TramiteCard tramite={tramite} />
-              </Grid2>
-            ))}
-          </Grid2>
+          <>
+            <Grid2 container spacing={3}>
+              {paginatedResults.map((tramite) => (
+                <Grid2 key={tramite.id} size={{ xs: 12, sm: 6, md: 4 }}>
+                  <TramiteCard tramite={tramite} />
+                </Grid2>
+              ))}
+            </Grid2>
+
+            {totalPages > 1 && (
+              <Box sx={{ mt: 5, display: 'flex', justifyContent: 'center' }}>
+                <Pagination
+                  count={totalPages}
+                  page={page}
+                  onChange={(_, value) => {
+                    setPage(value);
+                    window.scrollTo({ top: 250, behavior: 'smooth' });
+                  }}
+                  color="primary"
+                  shape="rounded"
+                  size="medium"
+                />
+              </Box>
+            )}
+          </>
         )}
       </Container>
     </Box>

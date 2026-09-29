@@ -30,6 +30,17 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return {
     title: `${tramite.nombre} — Costo, Requisitos y Pasos | ComoTramito`,
     description: `${tramite.descripcion} Costo: ${tramite.costoResumen}. Tiempo estimado: ${tramite.duracionTexto}.`,
+    openGraph: {
+      title: `${tramite.nombre} — Guía Oficial | ComoTramito`,
+      description: `${tramite.descripcion} Costo: ${tramite.costoResumen}.`,
+      type: 'article',
+      url: `https://comotramito.pe/tramite/${tramite.slug}`,
+    },
+    twitter: {
+      card: 'summary',
+      title: tramite.nombre,
+      description: tramite.descripcion,
+    },
   };
 }
 
