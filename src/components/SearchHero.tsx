@@ -25,6 +25,15 @@ import FlightTakeoffOutlinedIcon from '@mui/icons-material/FlightTakeoffOutlined
 import GavelOutlinedIcon from '@mui/icons-material/GavelOutlined';
 import ArrowLeftIcon from '@mui/icons-material/ArrowLeft';
 import ArrowRightIcon from '@mui/icons-material/ArrowRight';
+import WorkOutlineOutlinedIcon from '@mui/icons-material/WorkOutlineOutlined';
+import LocalHospitalOutlinedIcon from '@mui/icons-material/LocalHospitalOutlined';
+import FamilyRestroomOutlinedIcon from '@mui/icons-material/FamilyRestroomOutlined';
+import AssignmentTurnedInOutlinedIcon from '@mui/icons-material/AssignmentTurnedInOutlined';
+import StorefrontOutlinedIcon from '@mui/icons-material/StorefrontOutlined';
+import WaterDropOutlinedIcon from '@mui/icons-material/WaterDropOutlined';
+import SecurityOutlinedIcon from '@mui/icons-material/SecurityOutlined';
+import PauseOutlinedIcon from '@mui/icons-material/PauseOutlined';
+import PlayArrowOutlinedIcon from '@mui/icons-material/PlayArrowOutlined';
 import { useRouter } from 'next/navigation';
 import { searchTramites } from '@/data/tramitesService';
 import { Tramite } from '@/types/tramite';
@@ -54,7 +63,7 @@ const QUICK_PILLS = [
     icon: DirectionsCarOutlinedIcon,
     iconColor: '#2563EB',
     iconBg: '#EFF6FF',
-    label: 'Brevete',
+    label: 'Brevete A-1',
     slug: 'obtencion-brevete-a1',
   },
   {
@@ -66,11 +75,11 @@ const QUICK_PILLS = [
     slug: 'pago-luz-servicio',
   },
   {
-    type: 'icon',
-    icon: DescriptionOutlinedIcon,
-    iconColor: '#059669',
-    iconBg: '#DCFCE7',
-    label: 'RUC',
+    type: 'badge',
+    badgeText: 'RUC',
+    badgeBg: '#DCFCE7',
+    badgeColor: '#166534',
+    label: 'RUC y Clave SOL',
     slug: 'inscripcion-ruc-persona',
   },
   {
@@ -86,8 +95,88 @@ const QUICK_PILLS = [
     icon: GavelOutlinedIcon,
     iconColor: '#DC2626',
     iconBg: '#FEE2E2',
-    label: 'Antecedentes',
+    label: 'Antecedentes Penales',
     slug: 'antecedentes-penales',
+  },
+  {
+    type: 'icon',
+    icon: WorkOutlineOutlinedIcon,
+    iconColor: '#4F46E5',
+    iconBg: '#EEF2FF',
+    label: 'Certificado Laboral',
+    slug: 'certificado-unico-laboral',
+  },
+  {
+    type: 'badge',
+    badgeText: 'SIS',
+    badgeBg: '#ECFDF5',
+    badgeColor: '#059669',
+    label: 'Afiliación SIS',
+    slug: 'afiliacion-sis-gratuito',
+  },
+  {
+    type: 'icon',
+    icon: FamilyRestroomOutlinedIcon,
+    iconColor: '#0284C7',
+    iconBg: '#E0F2FE',
+    label: 'Partida Nacimiento',
+    slug: 'copia-partida-nacimiento',
+  },
+  {
+    type: 'badge',
+    badgeText: 'SUNARP',
+    badgeBg: '#FEF3C7',
+    badgeColor: '#B45309',
+    label: 'Alerta Registral',
+    slug: 'alerta-registral-sunarp',
+  },
+  {
+    type: 'icon',
+    icon: AssignmentTurnedInOutlinedIcon,
+    iconColor: '#2563EB',
+    iconBg: '#EFF6FF',
+    label: 'Récord Conductor',
+    slug: 'record-conductor-puntos',
+  },
+  {
+    type: 'icon',
+    icon: StorefrontOutlinedIcon,
+    iconColor: '#059669',
+    iconBg: '#DCFCE7',
+    label: 'Licencia Municipal',
+    slug: 'licencia-funcionamiento',
+  },
+  {
+    type: 'badge',
+    badgeText: 'DNIe',
+    badgeBg: '#EDE9FE',
+    badgeColor: '#6D28D9',
+    label: 'Renovación DNI',
+    slug: 'renovacion-dni',
+  },
+  {
+    type: 'icon',
+    icon: WaterDropOutlinedIcon,
+    iconColor: '#0284C7',
+    iconBg: '#E0F2FE',
+    label: 'Recibo de Agua',
+    slug: 'pago-agua-servicio',
+  },
+  {
+    type: 'icon',
+    icon: SecurityOutlinedIcon,
+    iconColor: '#475569',
+    iconBg: '#F1F5F9',
+    label: 'Antecedentes INPE',
+    slug: 'certificado-antecedentes-judiciales-inpe',
+  },
+  {
+    type: 'icon',
+    icon: DescriptionOutlinedIcon,
+    iconColor: '#059669',
+    iconBg: '#DCFCE7',
+    label: 'Recibos por Honorarios',
+    slug: 'emision-recibos-honorarios-electronicos',
   },
 ];
 
@@ -99,6 +188,9 @@ export default function SearchHero() {
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const [suggestions, setSuggestions] = useState<Tramite[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [direction, setDirection] = useState<'forward' | 'reverse'>('forward');
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -142,15 +234,13 @@ export default function SearchHero() {
   };
 
   const handleScrollLeft = () => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollBy({ left: -140, behavior: 'smooth' });
-    }
+    setDirection('reverse');
+    setIsPaused(false);
   };
 
   const handleScrollRight = () => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollBy({ left: 140, behavior: 'smooth' });
-    }
+    setDirection('forward');
+    setIsPaused(false);
   };
 
   return (
@@ -350,100 +440,128 @@ export default function SearchHero() {
             )}
           </Box>
 
-          {/* Quick Pill Chips Carousel */}
+          {/* Quick Pill Chips Animated Marquee Carousel */}
           <Box
-            ref={scrollRef}
             sx={{
-              display: 'flex',
-              gap: 1.25,
-              overflowX: 'auto',
+              position: 'relative',
+              overflow: 'hidden',
+              width: '100%',
               py: 0.5,
-              px: 0.25,
-              scrollbarWidth: 'none',
-              '&::-webkit-scrollbar': { display: 'none' },
+              maskImage: {
+                xs: 'linear-gradient(to right, transparent, black 4%, black 96%, transparent)',
+                sm: 'linear-gradient(to right, transparent, black 3%, black 97%, transparent)',
+              },
+              WebkitMaskImage: {
+                xs: 'linear-gradient(to right, transparent, black 4%, black 96%, transparent)',
+                sm: 'linear-gradient(to right, transparent, black 3%, black 97%, transparent)',
+              },
             }}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            onTouchStart={() => setIsHovered(true)}
+            onTouchEnd={() => setIsHovered(false)}
           >
-            {QUICK_PILLS.map((pill) => {
-              const IconComp = pill.icon;
-              return (
-                <Box
-                  key={pill.slug}
-                  component={Link}
-                  href={`/tramite/${pill.slug}`}
-                  sx={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 1,
-                    py: 0.75,
-                    px: 1.5,
-                    bgcolor: '#FFFFFF',
-                    border: '1px solid #E2E8F0',
-                    borderRadius: '9999px',
-                    textDecoration: 'none',
-                    whiteSpace: 'nowrap',
-                    flexShrink: 0,
-                    boxShadow: '0 1px 2px rgba(15, 23, 42, 0.02)',
-                    transition: 'all 0.15s ease',
-                    '&:hover': {
-                      borderColor: '#CBD5E1',
-                      bgcolor: '#F8FAFC',
-                      transform: 'translateY(-1px)',
-                    },
-                  }}
-                >
-                  {pill.type === 'badge' ? (
-                    <Box
-                      sx={{
-                        bgcolor: pill.badgeBg,
-                        color: pill.badgeColor,
-                        fontWeight: 800,
-                        fontSize: '0.72rem',
-                        px: 0.8,
-                        py: 0.2,
-                        borderRadius: '6px',
-                        letterSpacing: '0.02em',
-                      }}
-                    >
-                      {pill.badgeText}
-                    </Box>
-                  ) : IconComp ? (
-                    <Box
-                      sx={{
-                        width: 22,
-                        height: 22,
-                        borderRadius: '50%',
-                        bgcolor: pill.iconBg,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <IconComp sx={{ fontSize: 14, color: pill.iconColor }} />
-                    </Box>
-                  ) : null}
-
-                  <Typography
-                    variant="caption"
+            <Box
+              sx={{
+                display: 'flex',
+                gap: 1.5,
+                width: 'max-content',
+                animation: 'heroMarquee 52s linear infinite',
+                animationPlayState: isPaused || isHovered ? 'paused' : 'running',
+                animationDirection: direction === 'reverse' ? 'reverse' : 'normal',
+                willChange: 'transform',
+                '@keyframes heroMarquee': {
+                  '0%': { transform: 'translateX(0%)' },
+                  '100%': { transform: 'translateX(-50%)' },
+                },
+                '&:hover': {
+                  animationPlayState: 'paused',
+                },
+              }}
+            >
+              {[...QUICK_PILLS, ...QUICK_PILLS].map((pill, idx) => {
+                const IconComp = pill.icon;
+                return (
+                  <Box
+                    key={`${pill.slug}-${idx}`}
+                    component={Link}
+                    href={`/tramite/${pill.slug}`}
                     sx={{
-                      fontWeight: 600,
-                      color: '#1E293B',
-                      fontSize: '0.82rem',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 1,
+                      py: 0.85,
+                      px: 1.6,
+                      bgcolor: '#FFFFFF',
+                      border: '1px solid #E2E8F0',
+                      borderRadius: '9999px',
+                      textDecoration: 'none',
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0,
+                      boxShadow: '0 2px 4px rgba(15, 23, 42, 0.04)',
+                      transition: 'transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease',
+                      '&:hover': {
+                        borderColor: '#93C5FD',
+                        bgcolor: '#FFFFFF',
+                        transform: 'translateY(-2px) scale(1.02)',
+                        boxShadow: '0 6px 16px rgba(37, 99, 235, 0.18)',
+                      },
                     }}
                   >
-                    {pill.label}
-                  </Typography>
-                </Box>
-              );
-            })}
+                    {pill.type === 'badge' ? (
+                      <Box
+                        sx={{
+                          bgcolor: pill.badgeBg,
+                          color: pill.badgeColor,
+                          fontWeight: 800,
+                          fontSize: '0.72rem',
+                          px: 0.8,
+                          py: 0.2,
+                          borderRadius: '6px',
+                          letterSpacing: '0.02em',
+                        }}
+                      >
+                        {pill.badgeText}
+                      </Box>
+                    ) : IconComp ? (
+                      <Box
+                        sx={{
+                          width: 22,
+                          height: 22,
+                          borderRadius: '50%',
+                          bgcolor: pill.iconBg,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <IconComp sx={{ fontSize: 14, color: pill.iconColor }} />
+                      </Box>
+                    ) : null}
+
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        fontWeight: 600,
+                        color: '#1E293B',
+                        fontSize: '0.82rem',
+                      }}
+                    >
+                      {pill.label}
+                    </Typography>
+                  </Box>
+                );
+              })}
+            </Box>
           </Box>
 
-          {/* Carousel Track Indicator with Arrows (as in Image 1) */}
+          {/* Carousel Track Indicator with Controls */}
           <Box
             sx={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: 0.5,
+              gap: 0.75,
               mt: 1.5,
               color: '#94A3B8',
             }}
@@ -451,16 +569,21 @@ export default function SearchHero() {
             <IconButton
               size="small"
               onClick={handleScrollLeft}
-              sx={{ p: 0.25, color: '#94A3B8', '&:hover': { color: '#FFFFFF' } }}
-              aria-label="Anterior sugerencia"
+              title="Mover hacia la izquierda"
+              sx={{
+                p: 0.25,
+                color: direction === 'reverse' ? '#60A5FA' : '#94A3B8',
+                '&:hover': { color: '#FFFFFF', bgcolor: 'rgba(255, 255, 255, 0.08)' },
+              }}
+              aria-label="Mover hacia la izquierda"
             >
-              <ArrowLeftIcon sx={{ fontSize: 20 }} />
+              <ArrowLeftIcon sx={{ fontSize: 22 }} />
             </IconButton>
 
-            {/* Slider track line */}
+            {/* Slider track line with dynamic animated glow bar */}
             <Box
               sx={{
-                width: 130,
+                width: { xs: 120, sm: 150 },
                 height: 4,
                 bgcolor: 'rgba(255, 255, 255, 0.16)',
                 borderRadius: '9999px',
@@ -471,11 +594,21 @@ export default function SearchHero() {
               <Box
                 sx={{
                   position: 'absolute',
-                  left: '15%',
-                  width: '70%',
+                  top: 0,
                   height: '100%',
-                  bgcolor: '#60A5FA',
+                  width: '60%',
                   borderRadius: '9999px',
+                  background: 'linear-gradient(90deg, #3B82F6 0%, #60A5FA 50%, #93C5FD 100%)',
+                  boxShadow: '0 0 8px rgba(96, 165, 250, 0.5)',
+                  animation:
+                    isPaused || isHovered
+                      ? 'none'
+                      : 'trackProgress 2.8s ease-in-out infinite alternate',
+                  left: isPaused || isHovered ? '20%' : '0%',
+                  '@keyframes trackProgress': {
+                    '0%': { left: '0%' },
+                    '100%': { left: '40%' },
+                  },
                 }}
               />
             </Box>
@@ -483,10 +616,37 @@ export default function SearchHero() {
             <IconButton
               size="small"
               onClick={handleScrollRight}
-              sx={{ p: 0.25, color: '#94A3B8', '&:hover': { color: '#FFFFFF' } }}
-              aria-label="Siguiente sugerencia"
+              title="Mover hacia la derecha"
+              sx={{
+                p: 0.25,
+                color: direction === 'forward' ? '#60A5FA' : '#94A3B8',
+                '&:hover': { color: '#FFFFFF', bgcolor: 'rgba(255, 255, 255, 0.08)' },
+              }}
+              aria-label="Mover hacia la derecha"
             >
-              <ArrowRightIcon sx={{ fontSize: 20 }} />
+              <ArrowRightIcon sx={{ fontSize: 22 }} />
+            </IconButton>
+
+            {/* Pause / Play Toggle button */}
+            <IconButton
+              size="small"
+              onClick={() => setIsPaused((prev) => !prev)}
+              title={isPaused ? 'Reanudar carrusel' : 'Pausar carrusel'}
+              sx={{
+                p: 0.35,
+                ml: 0.5,
+                color: isPaused ? '#F59E0B' : '#94A3B8',
+                bgcolor: isPaused ? 'rgba(245, 158, 11, 0.15)' : 'transparent',
+                borderRadius: '6px',
+                '&:hover': { color: '#FFFFFF', bgcolor: 'rgba(255, 255, 255, 0.12)' },
+              }}
+              aria-label={isPaused ? 'Reanudar carrusel' : 'Pausar carrusel'}
+            >
+              {isPaused ? (
+                <PlayArrowOutlinedIcon sx={{ fontSize: 16 }} />
+              ) : (
+                <PauseOutlinedIcon sx={{ fontSize: 16 }} />
+              )}
             </IconButton>
           </Box>
         </Container>
