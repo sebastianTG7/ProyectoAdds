@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -20,6 +20,7 @@ import Link from './Link';
 
 interface InstitucionesGridProps {
   instituciones: (Institucion & { tramiteCount: number })[];
+  isHomePage?: boolean;
 }
 
 function getPrecioDisplay(t: Tramite): string {
@@ -29,7 +30,11 @@ function getPrecioDisplay(t: Tramite): string {
     }
     return `S/ ${t.costoPrincipal.toFixed(2)}`;
   }
-  if (t.costoPrincipal === 0 || t.costoResumen?.toLowerCase().includes('gratis') || t.costoResumen?.toLowerCase().includes('gratuito')) {
+  if (
+    t.costoPrincipal === 0 ||
+    t.costoResumen?.toLowerCase().includes('gratis') ||
+    t.costoResumen?.toLowerCase().includes('gratuito')
+  ) {
     return 'Gratis';
   }
   const firstPart = t.costoResumen?.split('/')[0]?.split('(')[0]?.trim();
@@ -44,32 +49,43 @@ function getSubtitle(inst: Institucion & { tramiteCount: number }): string {
   return `${count} ${count === 1 ? 'trámite' : 'trámites'}`;
 }
 
-export default function InstitucionesGrid({ instituciones }: InstitucionesGridProps) {
-  // Start with RENIEC expanded by default as requested in Image 1
-  const [expandedId, setExpandedId] = useState<string | null>('inst-reniec');
+export default function InstitucionesGrid({
+  instituciones,
+  isHomePage = true,
+}: InstitucionesGridProps) {
+  // En móvil inicia colapsada; solo en web/desktop inicia desglosada la RENIEC
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isHomePage && typeof window !== 'undefined' && window.innerWidth >= 900) {
+      setExpandedId('inst-reniec');
+    }
+  }, [isHomePage]);
 
   const toggleExpand = (id: string) => {
     setExpandedId((prev) => (prev === id ? null : id));
   };
 
-  // Priority order for institutions
+  // 10 Instituciones principales de máxima prioridad y demanda ciudadana
   const priorityOrder = [
     'inst-reniec',
-    'inst-mtc',
     'inst-sunat',
+    'inst-mtc',
     'inst-migraciones',
-    'inst-pnp',
-    'inst-pj',
-    'inst-inpe',
     'inst-sunarp',
+    'inst-pj',
+    'inst-pnp',
+    'inst-essalud',
     'inst-mtpe',
+    'inst-inpe',
     'inst-sis',
     'inst-muni-generica',
+    'inst-sat',
     'inst-sedapal',
     'inst-luz-sur',
   ];
 
-  // Include all institutions that have registered trámites
+  // Filtrar entidades que tengan trámites registrados
   const institucionesConTramites = instituciones.filter(
     (inst) => (inst.tramiteCount || 0) > 0
   );
@@ -83,9 +99,14 @@ export default function InstitucionesGrid({ instituciones }: InstitucionesGridPr
     return (b.tramiteCount || 0) - (a.tramiteCount || 0);
   });
 
+  // En la pantalla principal limitamos a las 10 principales (en móvil se ocultan las últimas 5 vía CSS)
+  const displayInstituciones = isHomePage
+    ? sortedInstituciones.slice(0, 10)
+    : sortedInstituciones;
+
   return (
     <Box sx={{ mb: { xs: 5, md: 7 } }}>
-      {/* Section Header: Explora por institución & Ver todas */}
+      {/* Encabezado de la sección */}
       <Box
         sx={{
           display: 'flex',
@@ -118,37 +139,38 @@ export default function InstitucionesGrid({ instituciones }: InstitucionesGridPr
           </Typography>
         </Box>
 
-        {/* 'Ver todas' button always visible including mobile */}
-        <Button
-          component={Link}
-          href="/instituciones"
-          size="small"
-          endIcon={<ArrowForwardIcon sx={{ fontSize: 14 }} />}
-          sx={{
-            color: 'info.main',
-            fontWeight: 600,
-            fontSize: { xs: '0.85rem', sm: '0.9rem' },
-            textTransform: 'none',
-            p: { xs: '4px 8px', sm: '6px 12px' },
-            minWidth: 'auto',
-            '&:hover': {
-              bgcolor: 'rgba(37, 99, 235, 0.06)',
-            },
-          }}
-        >
-          Ver todas
-        </Button>
+        {isHomePage && (
+          <Button
+            component={Link}
+            href="/instituciones"
+            size="small"
+            endIcon={<ArrowForwardIcon sx={{ fontSize: 14 }} />}
+            sx={{
+              color: 'info.main',
+              fontWeight: 600,
+              fontSize: { xs: '0.85rem', sm: '0.9rem' },
+              textTransform: 'none',
+              p: { xs: '4px 8px', sm: '6px 12px' },
+              minWidth: 'auto',
+              '&:hover': {
+                bgcolor: 'rgba(37, 99, 235, 0.06)',
+              },
+            }}
+          >
+            Ver todas
+          </Button>
+        )}
       </Box>
 
-      {/* Cards List / Grid */}
+      {/* Grid de Tarjetas */}
       <Grid2 container spacing={{ xs: 1.5, sm: 2, md: 2.5 }}>
-        {sortedInstituciones.map((inst) => {
+        {displayInstituciones.map((inst, index) => {
           const isExpanded = expandedId === inst.id;
           const instTramites = TRAMITES.filter((t) => t.institucionId === inst.id).sort(
             (a, b) => b.frecuenciaBusqueda - a.frecuenciaBusqueda
           );
 
-          // Group by subgrupo or category
+          // Agrupación por categoría / subgrupo
           const groupsMap: { [groupKey: string]: { title: string; tramites: Tramite[] } } = {};
           instTramites.forEach((t) => {
             const groupKey = t.subgrupo || t.categoria?.nombre || 'TRÁMITES';
@@ -161,8 +183,19 @@ export default function InstitucionesGrid({ instituciones }: InstitucionesGridPr
             groupsMap[groupKey].tramites.push(t);
           });
 
+          // En la pantalla principal:
+          // - Índices 0 al 4 (las 5 principales): visibles en móvil y web
+          // - Índices 5 al 9 (del 6 al 10): ocultas en celular ({ xs: 'none', md: 'block' })
+          const hideOnMobile = isHomePage && index >= 5;
+
           return (
-            <Grid2 key={inst.id} size={{ xs: 12, md: 6 }}>
+            <Grid2
+              key={inst.id}
+              size={{ xs: 12, md: 6 }}
+              sx={{
+                display: hideOnMobile ? { xs: 'none', md: 'block' } : 'block',
+              }}
+            >
               <Card
                 sx={{
                   bgcolor: '#FFFFFF',
@@ -179,7 +212,7 @@ export default function InstitucionesGrid({ instituciones }: InstitucionesGridPr
                   },
                 }}
               >
-                {/* Collapsed Card Header */}
+                {/* Header de la tarjeta */}
                 <CardActionArea
                   onClick={() => toggleExpand(inst.id)}
                   sx={{
@@ -190,7 +223,6 @@ export default function InstitucionesGrid({ instituciones }: InstitucionesGridPr
                   }}
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.75 }}>
-                    {/* Squircle Avatar with light blue background and blue bold text */}
                     <Avatar
                       sx={{
                         bgcolor: '#EBF3FE',
@@ -232,7 +264,7 @@ export default function InstitucionesGrid({ instituciones }: InstitucionesGridPr
                     </Box>
                   </Box>
 
-                  {/* Sleek animated arrow */}
+                  {/* Flecha indicadora animada */}
                   <Box
                     sx={{
                       display: 'flex',
@@ -247,7 +279,7 @@ export default function InstitucionesGrid({ instituciones }: InstitucionesGridPr
                   </Box>
                 </CardActionArea>
 
-                {/* Expanded Minimalist Drawer with delicate separation lines */}
+                {/* Panel desglosado con trámites */}
                 <Collapse in={isExpanded} timeout="auto" unmountOnExit>
                   <Box
                     sx={{
@@ -259,7 +291,6 @@ export default function InstitucionesGrid({ instituciones }: InstitucionesGridPr
                       border: '1px solid rgba(226, 232, 240, 0.7)',
                     }}
                   >
-                    {/* Groups by Subcategory (e.g. IDENTIDAD, ACTAS) */}
                     {Object.values(groupsMap).map((group, groupIdx) => (
                       <Box
                         key={group.title}
@@ -268,7 +299,6 @@ export default function InstitucionesGrid({ instituciones }: InstitucionesGridPr
                           mb: 1,
                         }}
                       >
-                        {/* Subcategory Label */}
                         <Typography
                           variant="caption"
                           sx={{
@@ -284,7 +314,6 @@ export default function InstitucionesGrid({ instituciones }: InstitucionesGridPr
                           {group.title}
                         </Typography>
 
-                        {/* List of Trámites with Divider Lines */}
                         <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                           {group.tramites.map((t, tIdx) => (
                             <React.Fragment key={t.id}>
@@ -333,7 +362,6 @@ export default function InstitucionesGrid({ instituciones }: InstitucionesGridPr
                                 </Typography>
                               </Box>
 
-                              {/* Delicate separation line between tramites as requested */}
                               {tIdx < group.tramites.length - 1 && (
                                 <Divider
                                   sx={{
@@ -354,6 +382,35 @@ export default function InstitucionesGrid({ instituciones }: InstitucionesGridPr
           );
         })}
       </Grid2>
+
+      {/* Botón inferior 'Ver todas las instituciones' en la pantalla principal */}
+      {isHomePage && (
+        <Box sx={{ mt: 3, textAlign: 'center' }}>
+          <Button
+            component={Link}
+            href="/instituciones"
+            variant="outlined"
+            endIcon={<ArrowForwardIcon fontSize="small" />}
+            sx={{
+              borderColor: '#CBD5E1',
+              color: '#0F172A',
+              fontWeight: 600,
+              fontSize: '0.875rem',
+              px: 3,
+              py: 1,
+              borderRadius: '10px',
+              textTransform: 'none',
+              bgcolor: '#FFFFFF',
+              '&:hover': {
+                borderColor: '#94A3B8',
+                bgcolor: '#F8FAFC',
+              },
+            }}
+          >
+            Ver las {instituciones.length} instituciones oficiales
+          </Button>
+        </Box>
+      )}
     </Box>
   );
 }

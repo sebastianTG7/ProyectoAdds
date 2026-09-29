@@ -40,7 +40,7 @@ export default function InstitucionesIndexPage() {
           </Typography>
         </Box>
 
-        <InstitucionesGrid instituciones={instituciones} />
+        <InstitucionesGrid instituciones={instituciones} isHomePage={false} />
       </Container>
     </Box>
   );
