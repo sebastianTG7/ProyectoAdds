@@ -456,7 +456,7 @@ export default function TramiteDetailView({ tramite, relatedTramites }: TramiteD
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 4 }}>
               <Button
                 component="a"
-                href={tramite.fuenteUrl}
+                href={tramite.fuenteUrl && !tramite.fuenteUrl.includes('tramitesperu.com') ? tramite.fuenteUrl : (tramite.institucion?.webOficial || 'https://www.gob.pe')}
                 target="_blank"
                 rel="noopener noreferrer"
                 variant="contained"

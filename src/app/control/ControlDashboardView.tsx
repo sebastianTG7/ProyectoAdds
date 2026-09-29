@@ -37,6 +37,7 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import RestartAltOutlinedIcon from '@mui/icons-material/RestartAltOutlined';
+import AccessTimeOutlinedIcon from '@mui/icons-material/AccessTimeOutlined';
 import ApartmentOutlinedIcon from '@mui/icons-material/ApartmentOutlined';
 import ViewListOutlinedIcon from '@mui/icons-material/ViewListOutlined';
 import TableRowsOutlinedIcon from '@mui/icons-material/TableRowsOutlined';
@@ -50,7 +51,55 @@ interface InfoAuditoria {
   fecha: string;
 }
 
-const STORAGE_KEY = 'comotramito_control_estados_v1';
+const STORAGE_KEY = 'comotramito_control_estados_v2';
+const LAST_MODIFIED_KEY = 'comotramito_control_last_modified_v2';
+const DEFAULT_LAST_MODIFIED = '2026-09-28T23:05:00.000Z';
+
+function formatFechaHoraModificacion(isoStr: string | null): string {
+  try {
+    const d = isoStr ? new Date(isoStr) : new Date();
+    if (isNaN(d.getTime())) return isoStr || '';
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const dd = pad(d.getDate());
+    const mm = pad(d.getMonth() + 1);
+    const yyyy = d.getFullYear();
+    const hh = pad(d.getHours());
+    const min = pad(d.getMinutes());
+    return `${dd}/${mm}/${yyyy} : ${hh}:${min}`;
+  } catch {
+    return isoStr || '';
+  }
+}
+
+// 26 Trámites del MVP inicial (100% verificados en normativa y tasas oficiales)
+const MVP_TRAMITE_SLUGS = new Set([
+  'duplicado-dni',
+  'renovacion-dni',
+  'dni-primera-vez',
+  'copia-partida-nacimiento',
+  'rectificacion-domicilio',
+  'pasaporte-electronico',
+  'obtencion-brevete-a1',
+  'revalidacion-licencia-conducir-a1',
+  'duplicado-licencia-conducir-a1',
+  'record-conductor-puntos',
+  'inscripcion-ruc-persona',
+  'clave-sol',
+  'emision-recibos-honorarios-electronicos',
+  'consulta-ruc-ficha-ruc-digital',
+  'suspension-retenciones-cuarta',
+  'antecedentes-penales',
+  'antecedentes-policiales',
+  'denuncia-policial-perdida',
+  'certificado-antecedentes-judiciales-inpe',
+  'certificado-unico-laboral',
+  'afiliacion-sis-gratuito',
+  'licencia-funcionamiento',
+  'impuesto-predial-arbitrios',
+  'duplicado-tive',
+  'pago-luz-servicio',
+  'pago-agua-servicio',
+]);
 
 export default function ControlDashboardView() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -60,20 +109,28 @@ export default function ControlDashboardView() {
   const [auditOverrides, setAuditOverrides] = useState<Record<string, InfoAuditoria>>({});
   const [isLoaded, setIsLoaded] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
+  const [lastModified, setLastModified] = useState<string | null>(null);
 
   // Inicializar o cargar desde localStorage (sin requerir login)
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
+      const savedLastMod = localStorage.getItem(LAST_MODIFIED_KEY);
+      if (savedLastMod) {
+        setLastModified(savedLastMod);
+      } else {
+        setLastModified(DEFAULT_LAST_MODIFIED);
+      }
       if (saved) {
         setAuditOverrides(JSON.parse(saved));
       } else {
-        // Carga inicial por defecto basada en los trámites
+        // Carga inicial: los 26 trámites MVP como 'vigente' y el resto como 'pendiente'
         const initialMap: Record<string, InfoAuditoria> = {};
         TRAMITES.forEach((t) => {
+          const isMvp = MVP_TRAMITE_SLUGS.has(t.slug);
           initialMap[t.id] = {
-            estado: 'vigente',
-            fecha: t.ultimaVerificacion || '2026-09-24',
+            estado: isMvp ? 'vigente' : 'pendiente',
+            fecha: t.ultimaVerificacion || (isMvp ? '2026-09-24' : '2026-09-28'),
           };
         });
         setAuditOverrides(initialMap);
@@ -87,7 +144,9 @@ export default function ControlDashboardView() {
 
   // Cambiar estado y persistir automáticamente en localStorage
   const handleStatusChange = (tramiteId: string, nuevoEstado: EstadoAuditoria) => {
-    const hoyStr = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const nowIso = now.toISOString();
+    const hoyStr = nowIso.split('T')[0];
     setAuditOverrides((prev) => {
       const updated = {
         ...prev,
@@ -98,11 +157,14 @@ export default function ControlDashboardView() {
       };
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+        localStorage.setItem(LAST_MODIFIED_KEY, nowIso);
       } catch (err) {
         console.error('Error al guardar en localStorage', err);
       }
       return updated;
     });
+
+    setLastModified(nowIso);
 
     const nombreTramite = TRAMITES.find((t) => t.id === tramiteId)?.nombreCorto || 'Trámite';
     setSnackbarMessage(
@@ -131,9 +193,10 @@ export default function ControlDashboardView() {
     if (window.confirm('¿Deseas restablecer todos los trámites al estado inicial?')) {
       const initialMap: Record<string, InfoAuditoria> = {};
       TRAMITES.forEach((t) => {
+        const isMvp = MVP_TRAMITE_SLUGS.has(t.slug);
         initialMap[t.id] = {
-          estado: 'vigente',
-          fecha: t.ultimaVerificacion || '2026-09-24',
+          estado: isMvp ? 'vigente' : 'pendiente',
+          fecha: t.ultimaVerificacion || (isMvp ? '2026-09-24' : '2026-09-28'),
         };
       });
       setAuditOverrides(initialMap);
@@ -142,7 +205,7 @@ export default function ControlDashboardView() {
       } catch {
         // Ignorar
       }
-      setSnackbarMessage('Valores de control restablecidos al estado inicial.');
+      setSnackbarMessage('Valores de control restablecidos (26 MVP vigentes, 743 pendientes).');
     }
   };
 
@@ -152,8 +215,10 @@ export default function ControlDashboardView() {
   const auditData = useMemo(() => {
     return TRAMITES.map((t) => {
       const override = auditOverrides[t.id];
-      const estadoActual: EstadoAuditoria = override?.estado || 'vigente';
-      const fechaActual = override?.fecha || t.ultimaVerificacion || '2026-09-24';
+      const isMvp = MVP_TRAMITE_SLUGS.has(t.slug);
+      const defaultEstado: EstadoAuditoria = isMvp ? 'vigente' : 'pendiente';
+      const estadoActual: EstadoAuditoria = override?.estado || defaultEstado;
+      const fechaActual = override?.fecha || t.ultimaVerificacion || (isMvp ? '2026-09-24' : '2026-09-28');
 
       const fechaObj = new Date(fechaActual);
       const diffMs = hoy.getTime() - fechaObj.getTime();
@@ -254,23 +319,53 @@ export default function ControlDashboardView() {
             </Typography>
           </Box>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Tooltip title="Exportar estados actuales a un archivo JSON de respaldo">
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={<FileDownloadOutlinedIcon />}
-                onClick={handleExportJson}
-                sx={{ borderColor: '#CBD5E1', color: '#334155', textTransform: 'none', fontWeight: 600, fontSize: '0.8rem' }}
+          <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: { xs: 1.5, sm: 2 }, justifyContent: { xs: 'flex-start', sm: 'flex-end' } }}>
+            {/* Fecha y hora de última modificación (sin recuadros ni bordes de color) */}
+            <Box
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 0.65,
+                bgcolor: 'transparent',
+                border: 'none',
+                py: 0.25,
+              }}
+            >
+              <AccessTimeOutlinedIcon sx={{ fontSize: 15, color: '#64748B' }} />
+              <Typography
+                component="span"
+                sx={{
+                  fontSize: '0.78rem',
+                  color: '#64748B',
+                  fontWeight: 500,
+                  lineHeight: 1.2,
+                }}
               >
-                Exportar JSON
-              </Button>
-            </Tooltip>
-            <Tooltip title="Restablecer todos los trámites al estado inicial">
-              <IconButton size="small" onClick={handleReset} sx={{ color: '#64748B' }}>
-                <RestartAltOutlinedIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
+                Última modificación:{' '}
+                <Box component="span" sx={{ color: '#0F172A', fontWeight: 600 }}>
+                  {isLoaded ? formatFechaHoraModificacion(lastModified) : 'Cargando...'}
+                </Box>
+              </Typography>
+            </Box>
+
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Tooltip title="Exportar estados actuales a un archivo JSON de respaldo">
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<FileDownloadOutlinedIcon />}
+                  onClick={handleExportJson}
+                  sx={{ borderColor: '#CBD5E1', color: '#334155', textTransform: 'none', fontWeight: 600, fontSize: '0.8rem' }}
+                >
+                  Exportar JSON
+                </Button>
+              </Tooltip>
+              <Tooltip title="Restablecer todos los trámites al estado inicial">
+                <IconButton size="small" onClick={handleReset} sx={{ color: '#64748B' }}>
+                  <RestartAltOutlinedIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Box>
           </Box>
         </Box>
 
@@ -646,7 +741,7 @@ export default function ControlDashboardView() {
                             <Tooltip title="Abrir fuente oficial (gob.pe / entidad)">
                               <IconButton
                                 component="a"
-                                href={t.fuenteUrl}
+                                href={t.fuenteUrl && !t.fuenteUrl.includes('tramitesperu.com') ? t.fuenteUrl : (t.institucion?.webOficial || 'https://www.gob.pe')}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 size="small"
@@ -784,7 +879,7 @@ export default function ControlDashboardView() {
                       <Tooltip title="Abrir ficha oficial en gob.pe / entidad">
                         <IconButton
                           component="a"
-                          href={t.fuenteUrl}
+                          href={t.fuenteUrl && !t.fuenteUrl.includes('tramitesperu.com') ? t.fuenteUrl : (t.institucion?.webOficial || 'https://www.gob.pe')}
                           target="_blank"
                           rel="noopener noreferrer"
                           size="small"

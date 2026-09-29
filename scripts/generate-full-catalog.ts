@@ -41,8 +41,8 @@ const EQUIVALENT_SLUGS: Record<string, string> = {
   'pago-agua-sedapal': 'pago-agua-servicio',
 };
 
-// 2. Extender Categorías
-const EXTENDED_CATEGORIAS: Categoria[] = [
+// 2. Extender Categorías (garantizando unicidad estricta)
+const ALL_CANDIDATE_CATEGORIAS: Categoria[] = [
   ...CURRENT_CATEGORIAS,
   {
     id: 'cat-8',
@@ -66,6 +66,15 @@ const EXTENDED_CATEGORIAS: Categoria[] = [
     icono: 'GavelOutlined',
   },
 ];
+
+const EXTENDED_CATEGORIAS: Categoria[] = [];
+const seenCatIds = new Set<string>();
+for (const cat of ALL_CANDIDATE_CATEGORIAS) {
+  if (!seenCatIds.has(cat.id)) {
+    seenCatIds.add(cat.id);
+    EXTENDED_CATEGORIAS.push(cat);
+  }
+}
 
 // 3. Extender Instituciones
 const NEW_INSTITUCIONES_DEFS: Institucion[] = [
@@ -320,7 +329,7 @@ for (const raw of rawData.tramites) {
     nombre: raw.nombre,
     nombreCorto: raw.nombre.split('(')[0].trim(),
     subgrupo: cat.nombre.toUpperCase(),
-    descripcion: `${raw.nombre} emitido por ${inst.nombre}. Consulta costos oficiales, pasos detallados y requisitos actualizados.`,
+    descripcion: raw.descripcion || `${raw.nombre} emitido por ${inst.nombre}. Consulta costos oficiales, pasos detallados y requisitos actualizados.`,
     categoriaId: cat.id,
     categoria: cat,
     institucionId: inst.id,
@@ -335,7 +344,9 @@ for (const raw of rawData.tramites) {
     vigenciaResultadoDias: raw.vigencia_resultado_dias ?? null,
     vigenciaTexto: raw.vigencia_resultado_dias ? `Vigencia oficial de ${raw.vigencia_resultado_dias} días calendario` : 'Vigencia indeterminada',
     ultimaVerificacion: '2026-09-28',
-    fuenteUrl: raw.fuente?.includes('http') ? raw.fuente.split(' ')[0] : inst.webOficial,
+    fuenteUrl: (raw.fuente && !raw.fuente.includes('tramitesperu.com') && raw.fuente.startsWith('http'))
+      ? raw.fuente.split(' ')[0]
+      : inst.webOficial,
     frecuenciaBusqueda: 7500,
     costoResumen,
     costoPrincipal,

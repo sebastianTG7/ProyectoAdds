@@ -5,7 +5,9 @@ export type TipoResultado =
   | 'documento_fisico'
   | 'licencia'
   | 'objeto_fisico'
-  | 'confirmacion';
+  | 'confirmacion'
+  | 'servicio_digital'
+  | 'consulta_informativa';
 
 export type Modalidad = 'online' | 'presencial' | 'mixta';
 
