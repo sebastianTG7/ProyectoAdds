@@ -40,7 +40,7 @@ export default function GuiasIndexPage() {
           </Typography>
         </Box>
 
-        <GuiasFeatured guias={guias} />
+        <GuiasFeatured guias={guias} isHomePage={false} />
       </Container>
     </Box>
   );

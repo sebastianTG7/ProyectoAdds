@@ -5,7 +5,7 @@
 **Total de Trámites Oficiales en la Web:** 769 trámites  
 **Total de Instituciones Públicas:** 48 entidades  
 **Total de Categorías Temáticas:** 10 categorías  
-**Total de Guías Multientidad:** 5 guías  
+**Total de Guías Multientidad:** 10 guías (44 trámites encadenados)  
 
 ---
 
