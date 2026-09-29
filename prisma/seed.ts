@@ -124,7 +124,7 @@ async function main() {
     }
   }
 
-  console.log('Base de datos poblada exitosamente con 20 tramites oficiales.');
+  console.log(`Base de datos poblada exitosamente con ${TRAMITES.length} tramites oficiales.`);
 }
 
 main()
